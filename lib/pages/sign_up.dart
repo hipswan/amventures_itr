@@ -24,7 +24,7 @@ class _SignUpState extends State<SignUp> {
   @override
   void initState() {
     super.initState();
-    _cNumber = TextEditingController(text: '');
+    _cNumber = TextEditingController(text: '7276948182');
   }
 
   @override
@@ -73,7 +73,7 @@ class _SignUpState extends State<SignUp> {
                 controller: _cNumber,
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
-                  if (value.trim().length == 10) {
+                  if (value.trim().length >= 10) {
                     FocusScope.of(context).requestFocus(
                       new FocusNode(),
                     );
@@ -123,7 +123,7 @@ class _SignUpState extends State<SignUp> {
               ),
               onPressed: () async {
                 // ignore: null_aware_in_condition
-                if (!(_formKey.currentState?.validate() ?? false)) {
+                if (_formKey.currentState?.validate() ?? false) {
                   log('form validation successful');
                   FocusScope.of(context).requestFocus(new FocusNode());
                   await SystemChannels.textInput.invokeMethod('TextInput.hide');

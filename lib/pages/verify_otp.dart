@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:itrpro/app_url.dart';
 import 'package:itrpro/pages/sign_up.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 import '../main.dart';
@@ -21,12 +22,10 @@ class VerifyOtp extends StatefulWidget {
 class _VerifyOtpState extends State<VerifyOtp> {
   bool isCodeSent = false;
   String? verificationCode,
-      workerId,
-      orgId,
-      orgName,
-      empName,
+      bankId,
+      bankName,
       role,
-      hajeriLevel,
+      mobileNumber,
       mainBankId,
       userTokenStatus,
       _code,
@@ -57,14 +56,15 @@ class _VerifyOtpState extends State<VerifyOtp> {
       });
     }
     try {
-      var response = await http.get(Uri.parse('$kSendOtp$number'), headers: {
+      var response =
+          await http.get(Uri.parse(AppUrl.SEND_OTP + number), headers: {
         'Content-Type': 'application/json',
       });
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         dev.log("the data is " + data.toString(), name: 'In send otp verify');
 
-        if (data['already_present_status']
+        if (data['status']
             .toString()
             .trim()
             .toLowerCase()
@@ -142,38 +142,19 @@ class _VerifyOtpState extends State<VerifyOtp> {
         //     .contains("yes")
         //     )
         {
-          if (data['worker_id'] == null)
-            workerId = "No Data";
-          else
-            workerId = data['worker_id'];
-          if (data['org_id'] == null)
-            orgId = "No Data";
-          else
-            orgId = data['org_id'];
-          if (data['org_name'] == null)
-            orgName = "No Data";
-          else
-            orgName = data['org_name'];
-          if (data['emp_name'] == null)
-            empName = "No Data";
-          else
-            empName = data['emp_name'];
-          role = data['role'];
-          if (data['hajerilevel'] == null)
-            hajeriLevel = "No Data";
-          else
-            hajeriLevel = data['hajerilevel'];
-          if (data['mainbankid'] == null &&
-              data['hajerilevel'] == "Hajeri-Head")
-            mainBankId = data['worker_id'].toString();
-          else
-            mainBankId = data['mainbankid'].toString();
+          role = data['role'] ?? 'No Data';
+          bankId = data['bank_id'] ?? 'No Data';
+          bankName = data['bank_name'] ?? 'No Data';
+          mobileNumber = data['mobile_number'] ?? 'No Data';
+
           // prefs.setBool("is_sub_org", hajeriLevel.contains("Hajeri-Head-1"));
 
           // dev.log(data.toString());
           setState(() {
             verificationCode =
                 number.contains('1234567890') ? '3231' : data['id'].toString();
+
+            isCodeSent = true;
 
             // otpcode = verificationCode;
           });
@@ -254,9 +235,6 @@ class _VerifyOtpState extends State<VerifyOtp> {
             );
           });
     }
-    setState(() {
-      isCodeSent = true;
-    });
   }
 
   @override
@@ -264,7 +242,7 @@ class _VerifyOtpState extends State<VerifyOtp> {
     super.initState();
     // dev.debugger();
     SmsAutoFill().listenForCode;
-    // sendCode(widget.number);
+    sendCode(widget.number);
   }
 
   @override
@@ -374,6 +352,7 @@ class _VerifyOtpState extends State<VerifyOtp> {
                       SizedBox(
                         width: mediaQuery.size.width * 0.65 - 50,
                         child: PinFieldAutoFill(
+                          autoFocus: true,
                           codeLength: 4,
                           decoration: UnderlineDecoration(
                             textStyle:
@@ -416,12 +395,9 @@ class _VerifyOtpState extends State<VerifyOtp> {
                             // }
                           },
                           onCodeChanged: (code) {
-                            if (code!.length == 4) {
-                              FocusScope.of(context).requestFocus(FocusNode());
-                              setState(() {
-                                _code = code;
-                              });
-                            }
+                            // FocusScope.of(context).requestFocus(FocusNode());
+                            _code = code;
+                            compareCode();
                           },
                         ),
                       ),
@@ -496,71 +472,7 @@ class _VerifyOtpState extends State<VerifyOtp> {
                       ),
                     ),
                     onPressed: () async {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => LandingPage()));
-                      // dev.log('Code is $_code');
-                      // if (_code!.length == 4) {
-                      //   if (_code?.compareTo(verificationCode ?? '-1') == 0) {
-                      //     prefs?.setString("mobile", widget.number.toString());
-                      //     prefs?.setString("worker_id", workerId!);
-                      //     prefs?.setString("org_id", orgId!);
-                      //     prefs?.setString("org_name", orgName!);
-                      //     prefs?.setString("emp_name", empName!);
-                      //     prefs?.setBool(
-                      //       "is_org",
-                      //       role!
-                      //           .trim()
-                      //           .toLowerCase()
-                      //           .contains('role_organization'),
-                      //     );
-                      //     userTokenStatus = await setUserToken();
-
-                      //     if (userTokenStatus!.contains('success')) {
-                      //       prefs?.setBool("login", true);
-                      //       // prefs.setBool("is_sub_org", true);
-                      //       prefs?.setString("main_bank_id", mainBankId!);
-                      //       prefs?.setBool("is_sub_org",
-                      //           hajeriLevel!.contains("Hajeri-Head-1"));
-
-                      //       Navigator.pushAndRemoveUntil(
-                      //         context,
-                      //         MaterialPageRoute(
-                      //           builder: (BuildContext context) =>
-                      //               LandingPage(),
-                      //         ),
-                      //         (Route<dynamic> route) => false,
-                      //         // ModalRoute.withName(SignUp.id),
-                      //       );
-                      //     } else {
-                      //       // Toast.show(
-                      //       //   userTokenStatus?.toLowerCase(),
-                      //       //   context,
-                      //       //   duration: Toast.LENGTH_LONG,
-                      //       //   gravity: Toast.BOTTOM,
-                      //       //   textColor: Colors.redAccent,
-                      //       // );
-                      //       Navigator.pop(context);
-                      //     }
-                      //   } else {
-                      //     // Toast.show(
-                      //     //   "Not the proper code".toLowerCase(),
-                      //     //   context,
-                      //     //   duration: Toast.LENGTH_LONG,
-                      //     //   gravity: Toast.BOTTOM,
-                      //     //   textColor: Colors.red,
-                      //     // );
-                      //   }
-                      // } else {
-                      //   // Toast.show(
-                      //   //   "Please Enter All Four Digits".toLowerCase(),
-                      //   //   context,
-                      //   //   duration: Toast.LENGTH_LONG,
-                      //   //   gravity: Toast.BOTTOM,
-                      //   //   textColor: Colors.red,
-                      //   // );
-                      // }
+                      await compareCode();
                     },
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -585,5 +497,48 @@ class _VerifyOtpState extends State<VerifyOtp> {
         ),
       ),
     );
+  }
+
+  compareCode() async {
+    dev.log('Code is $_code');
+    if (_code!.length == 4) {
+      FocusScope.of(context).requestFocus(FocusNode());
+
+      if (_code?.compareTo(verificationCode ?? '-1') == 0) {
+        await prefs?.setString("mobile", widget.number.toString());
+        await prefs?.setString("bank_id", bankId!);
+        await prefs?.setString("bank_name", bankName!);
+        await prefs?.setString("role", role!);
+        // prefs?.setBool(
+        //   "is_manager",
+        //   role!.trim().toLowerCase().contains('bank_manager'),
+        // );
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (BuildContext context) => LandingPage(),
+          ),
+          (Route<dynamic> route) => false,
+          // ModalRoute.withName(SignUp.id),
+        );
+      } else {
+        // Toast.show(
+        //   "Not the proper code".toLowerCase(),
+        //   context,
+        //   duration: Toast.LENGTH_LONG,
+        //   gravity: Toast.BOTTOM,
+        //   textColor: Colors.red,
+        // );
+      }
+    } else {
+      // Toast.show(
+      //   "Please Enter All Four Digits".toLowerCase(),
+      //   context,
+      //   duration: Toast.LENGTH_LONG,
+      //   gravity: Toast.BOTTOM,
+      //   textColor: Colors.red,
+      // );
+    }
   }
 }

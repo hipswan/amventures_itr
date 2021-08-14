@@ -151,8 +151,8 @@ class _LandingPageState extends State<LandingPage>
                 title: 'Pan',
               ),
               TabItem(
-                icon: Icons.qr_code_scanner,
-                title: 'Add',
+                icon: Icons.contact_mail,
+                title: 'Add Pan',
               ),
               TabItem(
                 icon: Icons.dashboard_outlined,
