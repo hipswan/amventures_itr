@@ -25,6 +25,7 @@ class _VerifyOtpState extends State<VerifyOtp> {
       bankId,
       bankName,
       role,
+      panId,
       mobileNumber,
       mainBankId,
       userTokenStatus,
@@ -146,7 +147,7 @@ class _VerifyOtpState extends State<VerifyOtp> {
           bankId = data['bank_id'] ?? 'No Data';
           bankName = data['bank_name'] ?? 'No Data';
           mobileNumber = data['mobile_number'] ?? 'No Data';
-
+          panId = data['pan_id'] ?? 'No Data';
           // prefs.setBool("is_sub_org", hajeriLevel.contains("Hajeri-Head-1"));
 
           // dev.log(data.toString());
@@ -507,6 +508,8 @@ class _VerifyOtpState extends State<VerifyOtp> {
       if (_code?.compareTo(verificationCode ?? '-1') == 0) {
         await prefs?.setString("mobile", widget.number.toString());
         await prefs?.setString("bank_id", bankId!);
+        await prefs?.setString("pan_id", panId!);
+
         await prefs?.setString("bank_name", bankName!);
         await prefs?.setString("role", role!);
         // prefs?.setBool(

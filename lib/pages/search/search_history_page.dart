@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:itrpro/network_helper.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:flutter/material.dart';
@@ -21,20 +24,109 @@ class SearchHistoryPage extends StatefulWidget {
   _SearchHistoryPageState createState() => _SearchHistoryPageState();
 }
 
-class _SearchHistoryPageState extends State<SearchHistoryPage> {
+class _SearchHistoryPageState extends State<SearchHistoryPage>
+    with AutomaticKeepAliveClientMixin {
   List<PanDownloadModel> recentDownloadList = [];
+  List<PanDownloadModel> lastPanDownloadList = [];
+  List<PanDownloadModel> searchDownloadList = [];
 
+  TextEditingController _cPan = TextEditingController();
   String status = "loading";
+  String? loaderMessage = 'Please Wait..';
+  bool isApiCall = true;
+  GlobalKey<FormState> _searchPanKey = GlobalKey();
+
+  @override
+  void didChangeDependencies() {
+    // TODO: implement didChangeDependencies
+    dev.log('did change dependencies');
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchHistoryPage oldWidget) {
+    if (recentDownloadList.isEmpty) {
+      getRecentDownloadList().then((value) async {
+        if (this.mounted) {
+          setState(() {
+            // isApiCall = false;
+            loaderMessage = "Loading last pan..";
+            status = value;
+          });
+          await getLastDownloadList();
+          setState(() {
+            // isApiCall = false;
+            loaderMessage = null;
+            // status = value;
+            isApiCall = false;
+          });
+        }
+      }).whenComplete(() {
+        getLastDownloadList().then((value) {
+          if (this.mounted) {
+            setState(() {
+              isApiCall = false;
+              status = value;
+            });
+          }
+        });
+      });
+    }
+    super.didUpdateWidget(oldWidget);
+  }
 
   @override
   void initState() {
-    getRecentDownloadList().then((value) {
-      setState(() {
-        status = value;
-      });
+    getRecentDownloadList().then((value) async {
+      if (this.mounted) {
+        setState(() {
+          isApiCall = false;
+          // loaderMessage = "Loading last pan..";
+          status = value;
+        });
+        // await getLastDownloadList();
+        // setState(() {
+        //   // isApiCall = false;
+        //   loaderMessage = null;
+        //   // status = value;
+        //   isApiCall = false;
+        // });
+      }
     });
 
     super.initState();
+  }
+
+  getLastDownloadList() async {
+    try {
+      String apiUrl = AppUrl.LAST_PAN_FOR_DSA;
+      String mobileNumber = prefs?.getString('mobile') ?? '';
+      String bankId = prefs?.getString('bank_id') ?? '';
+      String panNumber = prefs?.getString('pan_id') ?? '';
+
+      var response = await NetworkHelper.get(
+        apiUrl: apiUrl + '$mobileNumber/$panNumber/$bankId',
+      );
+
+      if (response.statusCode == 200) {
+        dev.log('get last pan card download detail is ${response.body}');
+        var parsedJson = json.decode(response.body);
+        for (var panDetails in parsedJson) {
+          lastPanDownloadList.add(PanDownloadModel.fromJson(panDetails));
+        }
+
+        return "success";
+      } else {
+        return "error";
+      }
+    } on io.SocketException catch (e, _) {
+      dev.log(_.toString());
+
+      return "no_internet";
+    } catch (e, _) {
+      dev.log(_.toString());
+      return "error";
+    }
   }
 
   setupFlutterDownloader() {
@@ -68,10 +160,8 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
       String apiUrl = AppUrl.GET_RECENT_DOWNLOAD;
       String mobileNumber = '7276948182';
       String bankId = '6';
-      http.Response response = await http.get(
-        Uri.parse(
-          apiUrl + '$mobileNumber/$bankId',
-        ),
+      var response = await NetworkHelper.get(
+        apiUrl: apiUrl + '$mobileNumber/$bankId',
       );
 
       if (response.statusCode == 200) {
@@ -95,6 +185,39 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
     }
   }
 
+  Future getPanSearchResult() async {
+    try {
+      String apiUrl = AppUrl.BANK_MANAGER_PAN_SEARCH;
+      String panNumber = _cPan.text.trim();
+      String bankId = prefs?.getString('bank_id') ?? '';
+      // '7276948182';
+
+      var response = await NetworkHelper.get(
+        apiUrl: apiUrl + '$panNumber/$bankId',
+      );
+
+      if (response.statusCode == 200) {
+        dev.log('get pan card search detail is ${response.body}');
+        var parsedJson = json.decode(response.body);
+        searchDownloadList.add(PanDownloadModel.fromJson(parsedJson));
+
+// {"id":null,"userid":null,"panorgstn":"AYMPM8589N","contact":null,"status":null,"submitdate":null,"reportreadydate":null,"assessmentyear":null,"username":null,"email":null,"bankname":null,"state":null,"mailstatus":null,"clientname":null,"mailid":null,"returntype":null,"pass":null,"month":null,"totalstatuscount":null,"ifsc":null,"itrpdfreport":"/FINALREPORT/2021-08-11-12-06/6/AYMPM8589N/100608021AYMPM8589N.PDF","accounttype":null,"systemusername":null,"branch":null}
+        //show alert
+      } else {
+        //show Alert
+      }
+    } on io.SocketException catch (e, _) {
+      dev.log(_.toString());
+
+      //show Alert
+
+    } catch (e, _) {
+      dev.log(_.toString());
+      //show Alert
+
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
@@ -104,119 +227,180 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
         backgroundColor: Colors.blue[50]!.withAlpha(75),
         automaticallyImplyLeading: false,
       ),
-      body: Container(
-        padding: EdgeInsets.fromLTRB(
-          30.0,
-          10.0,
-          30.0,
-          30.0,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.blue[50]!.withAlpha(75),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: double.maxFinite,
-              height: 50,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(50.0),
-                boxShadow: [
-                  BoxShadow(
-                    offset: Offset(
-                      0,
-                      10,
-                    ),
-                    blurRadius: 10.0,
-                    color: Colors.grey.withAlpha(60),
-                    spreadRadius: -5.0,
-                  )
-                ],
-              ),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      style: ButtonStyle(
-                        shape: MaterialStateProperty.all(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(
-                                50.0,
-                              ),
-                              bottomRight: Radius.circular(
-                                50.0,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: Icon(
-                        Icons.search,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: size.width - 60 - 50,
-                    child: TextField(
-                      cursorColor: Colors.green[800],
-                      cursorHeight: 20.0,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 8.0,
-                          horizontal: 12.0,
-                        ),
-                        hintText: 'Enter Pan Card Details',
-                        fillColor: Colors.blue[50],
-                        filled: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            50.0,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      body: ModalProgressHUD(
+        inAsyncCall: isApiCall,
+        progressIndicator: SizedBox(
+          height: MediaQuery.of(context).size.aspectRatio * 150,
+          width: size.width * 0.7,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: 32.0,
             ),
-            SizedBox(
-              height: 30,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(
+                8.0,
+              ),
+              border: Border.all(
+                width: 1.0,
+                color: Colors.black38,
+              ),
+              color: Colors.white,
             ),
-            Expanded(
-              child: Container(
+            child: Row(
+              children: [
+                CircularProgressIndicator(
+                  color: Colors.greenAccent,
+                ),
+                SizedBox(
+                  width: 15.0,
+                ),
+                Text('${loaderMessage ?? 'Please Wait...'}'),
+              ],
+            ),
+          ),
+        ),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            30.0,
+            10.0,
+            30.0,
+            30.0,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.blue[50]!.withAlpha(75),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: double.maxFinite,
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(50.0),
                   boxShadow: [
                     BoxShadow(
                       offset: Offset(
                         0,
-                        10,
+                        -3,
                       ),
                       blurRadius: 10.0,
                       color: Colors.grey.withAlpha(60),
                       spreadRadius: -5.0,
                     )
                   ],
-                  color: Colors.blue.shade50,
-                  border: Border.all(
-                    width: 2.0,
-                    color: Colors.blueGrey.withAlpha(
-                      100,
+                ),
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        style: ButtonStyle(
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(
+                                  50.0,
+                                ),
+                                bottomRight: Radius.circular(
+                                  50.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (_searchPanKey.currentState?.validate() ?? false) {
+                            searchDownloadList.clear();
+                            setState(
+                              () {
+                                loaderMessage = 'getting pan detail...';
+                                isApiCall = true;
+                              },
+                            );
+
+                            await getPanSearchResult();
+                            setState(() {
+                              loaderMessage = null;
+                              isApiCall = false;
+                            });
+                          }
+                        },
+                        child: Icon(
+                          Icons.search,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: size.width - 60 - 50,
+                      child: Form(
+                        key: _searchPanKey,
+                        child: TextFormField(
+                          controller: _cPan,
+                          cursorColor: Colors.green[800],
+                          cursorHeight: 20.0,
+                          validator: (value) {
+                            var searchPanValue = value?.trim() ?? '';
+                            if (searchPanValue.isEmpty) {
+                              return 'please enter pan card details';
+                            } else if (searchPanValue.length != 10) {
+                              return 'enter 10-digit alphanumeric number';
+                            }
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 8.0,
+                              horizontal: 12.0,
+                            ),
+                            hintText: 'Enter Pan Card Details',
+                            fillColor: Colors.blue[50],
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                50.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 30,
+              ),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        offset: Offset(
+                          0,
+                          10,
+                        ),
+                        blurRadius: 10.0,
+                        color: Colors.grey.withAlpha(60),
+                        spreadRadius: -5.0,
+                      )
+                    ],
+                    color: Colors.blue.shade50,
+                    border: Border.all(
+                      width: 2.0,
+                      color: Colors.blueGrey.withAlpha(
+                        100,
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(
+                      20.0,
                     ),
                   ),
-                  borderRadius: BorderRadius.circular(
-                    20.0,
+                  padding: EdgeInsets.all(
+                    8.0,
                   ),
+                  child: getDownloadListView(),
                 ),
-                padding: EdgeInsets.all(
-                  8.0,
-                ),
-                child: getDownloadListView(),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -225,8 +409,36 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
   Widget getDownloadListView() {
     switch (status) {
       case "success":
-        return RecentPanList(
-          recentPanList: recentDownloadList,
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (lastPanDownloadList.length > 0) Text('Last Pan'),
+              LimitedBox(
+                maxHeight: lastPanDownloadList.length * 65,
+                child: RecentPanList(
+                  panList: lastPanDownloadList,
+                  color: Colors.blueAccent,
+                ),
+              ),
+              if (searchDownloadList.length > 0) Text('Search Pan Result'),
+              LimitedBox(
+                maxHeight: searchDownloadList.length * 65,
+                child: RecentPanList(
+                  panList: searchDownloadList,
+                  color: Colors.greenAccent,
+                ),
+              ),
+              if (recentDownloadList.length > 0) Text('Pan List'),
+              LimitedBox(
+                maxHeight: recentDownloadList.length * 65,
+                child: RecentPanList(
+                  panList: recentDownloadList,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
         );
         break;
       case "no_result":
@@ -243,20 +455,28 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
         break;
     }
   }
+
+  @override
+  // TODO: implement wantKeepAlive
+  bool get wantKeepAlive => true;
 }
 
 class RecentPanList extends StatelessWidget {
-  final List<PanDownloadModel>? recentPanList;
-  const RecentPanList({
+  final List<PanDownloadModel>? panList;
+  final color;
+
+  RecentPanList({
     Key? key,
-    @required this.recentPanList,
+    @required this.panList,
+    this.color,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
       itemExtent: 65,
-      itemCount: recentPanList?.length,
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: panList?.length,
       itemBuilder: (context, index) {
         return Row(
           children: [
@@ -269,7 +489,7 @@ class RecentPanList extends StatelessWidget {
                     borderRadius: BorderRadius.circular(
                       50.0,
                     ),
-                    color: Colors.redAccent,
+                    color: color,
                     boxShadow: [
                       BoxShadow(
                         offset: Offset(
@@ -325,8 +545,8 @@ class RecentPanList extends StatelessWidget {
                     ),
                     Expanded(
                       flex: 78,
-                      child: Text(
-                        '${recentPanList?.elementAt(index).panorgstn ?? 'error'}',
+                      child: SelectableText(
+                        '${panList?.elementAt(index).panorgstn ?? 'error'}',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
@@ -356,7 +576,7 @@ class RecentPanList extends StatelessWidget {
               ),
               onPressed: () async {
                 // log('Pressed Download Button');
-                var currentPanDetail = recentPanList?.elementAt(index);
+                var currentPanDetail = panList?.elementAt(index);
                 if (currentPanDetail?.itrpdfreport?.isNotEmpty ?? false) {
                   String fileName = '${currentPanDetail?.userid}.pdf';
 
@@ -394,15 +614,17 @@ class RecentPanList extends StatelessWidget {
                         var iOSPlatformChannelSpecifics =
                             new IOSNotificationDetails();
                         var platformChannelSpecifics = new NotificationDetails(
-                            android: androidPlatformChannelSpecifics,
-                            iOS: iOSPlatformChannelSpecifics);
+                          android: androidPlatformChannelSpecifics,
+                          iOS: iOSPlatformChannelSpecifics,
+                        );
 
                         await flutterLocalNotificationsPlugin.show(
-                            0,
-                            'ITR stats for ${currentPanDetail?.panorgstn}',
-                            'Tap To Open',
-                            platformChannelSpecifics,
-                            payload: pdfPath);
+                          0,
+                          'ITR stats for ${currentPanDetail?.panorgstn}',
+                          'Tap To Open',
+                          platformChannelSpecifics,
+                          payload: pdfPath,
+                        );
                         // Platform.isIOS ? OpenFile.open(excelPath) : null;
 
                         AwesomeDialog(
@@ -456,6 +678,19 @@ class RecentPanList extends StatelessWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('server error!'),
+                          padding: EdgeInsets.fromLTRB(
+                            12.0,
+                            0.0,
+                            12.0,
+                            50.0,
+                          ),
+                          backgroundColor: Colors.lightBlue,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              width: 1.0,
+                              color: Colors.blue,
+                            ),
+                          ),
                         ),
                       );
                     }
@@ -476,8 +711,25 @@ class RecentPanList extends StatelessWidget {
 
                   } on io.SocketException catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
                         content: Text('device is not connected to internet'),
+                        margin: EdgeInsets.fromLTRB(
+                          12.0,
+                          0.0,
+                          12.0,
+                          50.0,
+                        ),
+                        backgroundColor: Colors.lightBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            12.0,
+                          ),
+                          side: BorderSide(
+                            width: 1.0,
+                            color: Colors.blue,
+                          ),
+                        ),
                       ),
                     );
                   } on path.MissingPlatformDirectoryException catch (e1) {
@@ -486,6 +738,19 @@ class RecentPanList extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('file not downloaded'),
+                        padding: EdgeInsets.fromLTRB(
+                          12.0,
+                          0.0,
+                          12.0,
+                          50.0,
+                        ),
+                        backgroundColor: Colors.lightBlue,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 1.0,
+                            color: Colors.blue,
+                          ),
+                        ),
                       ),
                     );
                   } catch (e2) {
@@ -494,6 +759,19 @@ class RecentPanList extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('file not downloaded'),
+                        padding: EdgeInsets.fromLTRB(
+                          12.0,
+                          0.0,
+                          12.0,
+                          50.0,
+                        ),
+                        backgroundColor: Colors.lightBlue,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 1.0,
+                            color: Colors.blue,
+                          ),
+                        ),
                       ),
                     );
                   }

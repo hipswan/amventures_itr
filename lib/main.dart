@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:itrpro/pages/landing_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/sign_up.dart';
@@ -14,7 +15,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  prefs = await SharedPreferences.getInstance();
   runApp(MyApp());
 }
 

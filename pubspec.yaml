@@ -21,20 +21,22 @@ environment:
   sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
   awesome_dialog: ^2.1.0
   convex_bottom_bar: ^3.0.0
   cupertino_icons: ^1.0.2
+  flutter:
+    sdk: flutter
   flutter_downloader: ^1.6.1
   flutter_local_notifications: ^8.0.0
   flutter_svg: ^0.22.0
   http: ^0.13.3
+  modal_progress_hud_nsn: ^0.1.0-nullsafety-1
   open_file: ^3.2.1
   path_provider: ^2.0.2
   permission_handler: ^8.1.4+2
   shared_preferences: ^2.0.4
   sms_autofill: ^2.0.1
+  webview_flutter:
 
 dev_dependencies:
   flutter_test:

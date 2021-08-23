@@ -13,4 +13,12 @@ class NetworkHelper {
 
     return response;
   }
+
+  static Future<http.Response> post(
+      {String? apiUrl, Map<String, dynamic>? body, int timeout = 60000}) async {
+    var response = await http.post(Uri.parse(apiUrl!)).timeout(
+          Duration(milliseconds: timeout),
+        );
+    return response;
+  }
 }
