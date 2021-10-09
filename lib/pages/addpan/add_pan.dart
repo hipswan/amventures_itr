@@ -23,7 +23,7 @@ class _AddPanPageState extends State<AddPanPage>
     with AutomaticKeepAliveClientMixin<AddPanPage> {
   bool isSubmitted = false;
   String? bankName;
-  TextEditingController _cPan = TextEditingController();
+  TextEditingController _cPan = TextEditingController(text: 'BEZPS6655F');
   TextEditingController _cCamobile = TextEditingController();
   List<BankDetail> bankDetails = [];
   List<DropdownMenuItem<String>> bankNameDropDownItems = [
@@ -81,6 +81,7 @@ class _AddPanPageState extends State<AddPanPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // isApiCall = false;
     var size = MediaQuery.of(context).size;
     return Scaffold(
@@ -314,7 +315,7 @@ class _AddPanPageState extends State<AddPanPage>
                               ElevatedButton(
                                 onPressed: () async {
                                   bool isTermsChecked = false;
-                                  await showDialog(
+                                  var result = await showDialog(
                                     context: context,
                                     builder: (context) => AlertDialog(
                                       title: Text(
@@ -352,19 +353,28 @@ class _AddPanPageState extends State<AddPanPage>
                                                 ),
                                               ),
                                             ),
-                                            Row(
-                                              children: [
-                                                Checkbox(
-                                                  value: isTermsChecked,
-                                                  onChanged: (termsChecked) {
-                                                    termSetter(() {
-                                                      isTermsChecked =
-                                                          termsChecked!;
-                                                    });
-                                                  },
-                                                ),
-                                                Expanded(
-                                                  child: GestureDetector(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: 10.0,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Expanded(
+                                                    child: Checkbox(
+                                                      value: isTermsChecked,
+                                                      onChanged:
+                                                          (termsChecked) {
+                                                        termSetter(() {
+                                                          isTermsChecked =
+                                                              termsChecked!;
+                                                        });
+                                                      },
+                                                    ),
+                                                  ),
+                                                  GestureDetector(
                                                     behavior: HitTestBehavior
                                                         .translucent,
                                                     onTap: () {
@@ -378,8 +388,8 @@ class _AddPanPageState extends State<AddPanPage>
                                                       maxLines: 2,
                                                     ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                             ElevatedButton(
                                               style: ButtonStyle(
@@ -394,26 +404,8 @@ class _AddPanPageState extends State<AddPanPage>
                                               onPressed: isTermsChecked
                                                   ? () async {
                                                       Navigator.of(context)
-                                                          .pop();
-                                                      setState(() {
-                                                        loaderMessage =
-                                                            'Processing your request..';
-                                                        isApiCall = true;
-                                                      });
-                                                      // await processPanAddRequest();
-                                                      await Future.delayed(
-                                                        Duration(
-                                                          seconds: 2,
-                                                        ),
-                                                      );
-                                                      setState(() {
-                                                        loaderMessage = null;
-                                                        isApiCall = false;
-                                                      });
-                                                      routeToDownload(
-                                                        url:
-                                                            'https://www.bankverification.in/urlitrdownload/startitrdownload/download@bankverification.in/6/ITR/CWBPK6582J/nogst',
-                                                      );
+                                                          .pop<String>(
+                                                              'process');
                                                     }
                                                   : null,
                                               child: Text(
@@ -428,6 +420,30 @@ class _AddPanPageState extends State<AddPanPage>
                                       ),
                                     ),
                                   );
+
+                                  if (result != null) {
+                                    setState(() {
+                                      loaderMessage =
+                                          'Processing your request..';
+                                      isApiCall = true;
+                                    });
+                                    var result = await processPanAddRequest();
+                                    if (result.contains('error')) {
+                                      await Future.delayed(
+                                        Duration(
+                                          seconds: 2,
+                                        ),
+                                      );
+                                      setState(() {
+                                        loaderMessage = null;
+                                        isApiCall = false;
+                                      });
+                                      routeToDownload(
+                                        url:
+                                            'https://www.bankverification.in/urlitrdownload/startitrdownload/download@bankverification.in/6/ITR/CWBPK6582J/nogst',
+                                      );
+                                    }
+                                  }
                                 },
                                 child: Text(
                                   'No',
@@ -565,16 +581,18 @@ class _AddPanPageState extends State<AddPanPage>
                                   });
                                   String saveResult = await savePanRes();
 
-                                  if (saveResult
+                                  if (!saveResult
                                       .toLowerCase()
-                                      .contains('success')) {}
-                                  //toast failed to save
-                                  setState(() {
-                                    loaderMessage = null;
+                                      .contains('success')) {
+                                    setState(() {
+                                      loaderMessage = null;
 
-                                    isApiCall = false;
-                                    isSubmitted = true;
-                                  });
+                                      isApiCall = false;
+                                      isSubmitted = true;
+                                    });
+                                  }
+                                  //toast failed to save
+
                                 }
                               },
                               child: Text(
@@ -596,12 +614,14 @@ class _AddPanPageState extends State<AddPanPage>
   }
 
   Future routeToDownload({String? url}) async {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => ProcessAddPage(
-                  downloadUrl: url,
-                )));
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProcessAddPage(
+          downloadUrl: url,
+        ),
+      ),
+    );
   }
 
   Future processPanAddRequest() async {

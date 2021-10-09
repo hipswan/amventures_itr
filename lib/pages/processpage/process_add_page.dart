@@ -22,7 +22,7 @@ class _ProcessAddPageState extends State<ProcessAddPage> {
   @override
   void initState() {
     // TODO: implement initState
-    WebView.platform = SurfaceAndroidWebView();
+    if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
     processBegins = DateTime.now();
     checkStatus();
 
@@ -81,6 +81,12 @@ class _ProcessAddPageState extends State<ProcessAddPage> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Verify Document',
+          ),
+          centerTitle: true,
+        ),
         body: StreamBuilder(
             initialData: '',
             stream: checkProcessStatus.stream,

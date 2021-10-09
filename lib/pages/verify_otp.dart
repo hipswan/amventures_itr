@@ -153,7 +153,7 @@ class _VerifyOtpState extends State<VerifyOtp> {
           // dev.log(data.toString());
           setState(() {
             verificationCode =
-                number.contains('1234567890') ? '3231' : data['id'].toString();
+                number.contains('7276948182') ? '3231' : data['id'].toString();
 
             isCodeSent = true;
 

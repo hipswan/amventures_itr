@@ -24,8 +24,7 @@ class SearchHistoryPage extends StatefulWidget {
   _SearchHistoryPageState createState() => _SearchHistoryPageState();
 }
 
-class _SearchHistoryPageState extends State<SearchHistoryPage>
-    with AutomaticKeepAliveClientMixin {
+class _SearchHistoryPageState extends State<SearchHistoryPage> {
   List<PanDownloadModel> recentDownloadList = [];
   List<PanDownloadModel> lastPanDownloadList = [];
   List<PanDownloadModel> searchDownloadList = [];
@@ -50,7 +49,7 @@ class _SearchHistoryPageState extends State<SearchHistoryPage>
         if (this.mounted) {
           setState(() {
             // isApiCall = false;
-            loaderMessage = "Loading last pan..";
+            loaderMessage = "Loading last pan details..";
             status = value;
           });
           await getLastDownloadList();
@@ -455,10 +454,6 @@ class _SearchHistoryPageState extends State<SearchHistoryPage>
         break;
     }
   }
-
-  @override
-  // TODO: implement wantKeepAlive
-  bool get wantKeepAlive => true;
 }
 
 class RecentPanList extends StatelessWidget {
